@@ -1,12 +1,11 @@
-# EnumKraft – Grid Physics + ML for Dunkelflaute
+cd ~/dev/enumkraft
+echo "# EnumKraft – Evidence
 
-Goal: predict Dunkelflaute events combining grid frequency dynamics with ML.
+## North-South bottleneck (Germany)
+- NEP 2037/2045: official TSO planning document
+- 'Achilles' heel' – wind in north, demand in south
+- Grid booster Kupferzell (TenneT, 250 MW, operational 2025)
+- Virtual Transmission Lines = battery storage
 
-Status: planning phase, evidence gathered.
-
-## Evidence
-see [evidence.md](evidence.md)
-
-## Next
-- data source: ENTSO-E / TenneT
-- baseline: frequency drop detection + ML classifier
+## Dunkelflaute relevance
+- When wind+solar collapse, Bavaria faces local shortfall + import limits" > evidence.md
