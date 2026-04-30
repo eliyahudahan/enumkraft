@@ -1,2 +1,2 @@
-# enumkraft
-Grid physics + ML research for Dunkelflaute prediction / north-south bottleneck evidence
+# EnumKraft – Grid Physics + ML Research
+Planning phase. Evidence: north-south bottleneck, Kupferzell grid booster.
