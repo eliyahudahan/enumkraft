@@ -63,5 +63,5 @@ def collect_frequency_hours(hours=3, aggr="5s", out_csv="data/frequency_ce.csv")
 
 if __name__ == "__main__":
     # איסוף 3 שעות (ניתן לשנות ל‑2 או 4 בהתאם לצורך)
-    df = collect_frequency_hours(hours=3, aggr="5s")
+    df = collect_frequency_hours(hours=1, aggr="5s")
     print(df.head())
