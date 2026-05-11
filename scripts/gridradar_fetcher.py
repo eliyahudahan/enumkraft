@@ -50,15 +50,22 @@ def collect_frequency_hours(hours=3, aggr="5s", out_csv="data/frequency_ce.csv")
         all_data.append(df_chunk)
         elapsed = (datetime.now(timezone.utc) - start).total_seconds()
         wait = max(0, 3600 - elapsed)
-        if i < hours-1:
-            print(f"   Waiting {wait:.1f} seconds before next fetch...")
-            time.sleep(wait)
+        if hours > 1 and i < hours-1:
+           time.sleep(wait)
+           
     final_df = pd.concat(all_data, ignore_index=True)
     final_df = final_df.drop_duplicates(subset=["timestamp", "pmu"])
     final_df = final_df.sort_values("timestamp")
+
+      
     os.makedirs(os.path.dirname(out_csv), exist_ok=True)
+    if os.path.exists(out_csv):
+       print(f"Overwriting existing file: {out_csv}")
+
     final_df.to_csv(out_csv, index=False)
     print(f"Saved {len(final_df)} points to {out_csv}")
+    print(f"Collected {len(final_df)} points from {len(all_data)} chunks")
+   
     return final_df
 
 if __name__ == "__main__":
