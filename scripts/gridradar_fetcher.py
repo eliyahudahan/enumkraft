@@ -6,7 +6,7 @@ import time
 from dotenv import load_dotenv
 
 # ==========================================================
-# טוען טוקן מקובץ .env (לא ב‑GitHub)
+# Load token from .env file (not in Git)
 # ==========================================================
 load_dotenv()
 TOKEN = os.getenv("GRIDRADAR_TOKEN")
@@ -18,7 +18,7 @@ headers = {"Authorization": f"Bearer {TOKEN}", "Content-Type": "application/json
 
 
 def fetch_frequency_chunk(aggr="5s"):
-    """מחזיר DataFrame של תדרים (frequency_ucte_median) עבור פרק זמן של כשעה"""
+    """Return DataFrame of median frequency for approx. one hour."""
     payload = {
         "metric": "frequency-ucte-median-1s",
         "aggr": aggr,
@@ -41,7 +41,7 @@ def fetch_frequency_chunk(aggr="5s"):
     return df
 
 def collect_frequency_hours(hours=3, aggr="5s", out_csv="data/frequency_ce.csv"):
-    """אוסף נתונים למספר שעות (החשבון החינמי: קריאה אחת ≈ שעה)"""
+    """Collect data for several hours (free tier: one call ≈ one hour)."""
     all_data = []
     for i in range(hours):
         print(f"Fetching hour {i+1}/{hours} (aggr={aggr})...")
@@ -69,6 +69,6 @@ def collect_frequency_hours(hours=3, aggr="5s", out_csv="data/frequency_ce.csv")
     return final_df
 
 if __name__ == "__main__":
-    # איסוף 3 שעות (ניתן לשנות ל‑2 או 4 בהתאם לצורך)
+    # Collect 3 hours (adjustable to 2 or 4)
     df = collect_frequency_hours(hours=1, aggr="5s")
     print(df.head())
