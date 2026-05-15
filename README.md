@@ -68,9 +68,11 @@ enumkraft/
 
 ## 📌 Limitations (transparent)
 
-- No temporal overlap between `gen_df` (27.04–03.05) and Gridradar frequency (04.05 onward)  
-- Swing equation uses fallback 50 Hz for demonstration  
-- No merge performed – the model uses generation + time features instead of frequency alignment.
+- No temporal overlap between ENTSOE-E `gen_df` (27.04–03.05) and Gridradar frequency (04.05  
+  onward)  
+- No frequency data for the same period – the model predicts load from generation + time features (hour, day_of_week, month, weekend)  
+- No merge performed, no external frequency source used or required  
+- Swing equation uses fallback 50 Hz for demonstration only
 
 ## 📚 References
 
