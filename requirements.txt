@@ -1,5 +1,11 @@
+fastapi
+uvicorn
+lightgbm
 pandas
 numpy
 matplotlib
 jupyter
+requests
+python-dotenv
 psycopg2-binary
+joblib
