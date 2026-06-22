@@ -1,20 +1,15 @@
-# app/main.py - קוד מינימלי שעובד
 from fastapi import FastAPI
+from app.dwd_fetcher import get_germany_weather
+from app.dunkelflaute import check_dunkelflaute_today
+from app.macro_tier import MacroTier
+from app.micro_tier import MicroTier
+from app.physics_bridge import PhysicsBridge
 from datetime import datetime
 import pandas as pd
-import joblib
-import os
-from dotenv import load_dotenv
 
-load_dotenv()
-
-app = FastAPI(title="EnumKraft 2.0", version="2.0")
-
-# טעינת מודל LightGBM (אם קיים)
-MODEL_PATH = "models/lightgbm_model.pkl"
-model = None
-if os.path.exists(MODEL_PATH):
-    model = joblib.load(MODEL_PATH)
+app = FastAPI(title="EnumKraft 2.0", version="2.0.0")
+macro = MacroTier()
+micro = MicroTier()
 
 @app.get("/")
 async def root():
@@ -24,38 +19,51 @@ async def root():
         "timestamp": datetime.now().isoformat()
     }
 
-@app.get("/health")
-async def health():
-    return {"status": "ok"}
-
-@app.get("/frequency/current")
-async def get_frequency():
-    """Get current grid frequency from Gridradar"""
-    # TODO: connect to Gridradar
+@app.get("/api/v1/macro/forecast")
+async def macro_forecast():
+    load = macro.predict_load()
+    weather = get_germany_weather()
+    
+    # ✅ תיקון: בדיקה נכונה ל-DataFrame
+    if weather is not None and not weather.empty:
+        cf = macro.compute_cf(weather)
+    else:
+        cf = 0
+    
     return {
-        "frequency": 50.02,
-        "timestamp": datetime.now().isoformat(),
-        "source": "Gridradar (mock)"
-    }
-
-@app.post("/predict/load")
-async def predict_load(data: dict):
-    """Predict load from generation"""
-    generation = data.get("generation_mw", 0)
-    # TODO: use LightGBM
-    return {
-        "generation_mw": generation,
-        "predicted_load_mw": generation * 0.95,  # placeholder
+        "load_mw": load,
+        "cf_48h": cf,
         "timestamp": datetime.now().isoformat()
     }
 
-@app.get("/dunkelflaute/detect")
-async def detect_dunkelflaute():
-    """Detect Dunkelflaute conditions"""
-    # TODO: implement logic
+@app.get("/api/v1/micro/frequency")
+async def micro_frequency():
+    freq = micro.get_frequency()
+    return freq
+
+@app.get("/api/v1/grid/stability")
+async def grid_stability():
+    load = macro.predict_load()
+    weather = get_germany_weather()
+    freq = micro.get_frequency()
+    
+    # ✅ תיקון: בדיקה נכונה ל-DataFrame
+    if weather is not None and not weather.empty:
+        df = pd.DataFrame({
+            'timestamp': pd.date_range('2026-06-22', periods=48, freq='h'),
+            'wind_speed': [weather['wind_speed'].iloc[0] if 'wind_speed' in weather else 3] * 48,
+            'solar_radiation': [weather['solar_radiation'].iloc[0] if 'solar_radiation' in weather else 200] * 48
+        })
+        dunkelflaute_result, cf = check_dunkelflaute_today(df)
+    else:
+        dunkelflaute_result = False
+        cf = 0
+    
     return {
-        "dunkelflaute_detected": False,
-        "wind_speed": 3.5,
-        "solar_irradiance": 200,
+        "stability_status": "EMERGENCY" if dunkelflaute_result else "NORMAL",
+        "dunkelflaute_detected": dunkelflaute_result,
+        "frequency_hz": freq.get('frequency', 50.0),
+        "load_mw": load,
+        "cf_48h": cf,
         "timestamp": datetime.now().isoformat()
     }
