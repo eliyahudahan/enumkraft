@@ -6,6 +6,7 @@ from app.micro_tier import MicroTier
 from app.physics_bridge import PhysicsBridge
 from datetime import datetime
 import pandas as pd
+import numpy as np
 
 app = FastAPI(title="EnumKraft 2.0", version="2.0.0")
 macro = MacroTier()
@@ -23,13 +24,7 @@ async def root():
 async def macro_forecast():
     load = macro.predict_load()
     weather = get_germany_weather()
-    
-    # ✅ תיקון: בדיקה נכונה ל-DataFrame
-    if weather is not None and not weather.empty:
-        cf = macro.compute_cf(weather)
-    else:
-        cf = 0
-    
+    cf = macro.compute_cf(weather) if weather is not None and not weather.empty else 0
     return {
         "load_mw": load,
         "cf_48h": cf,
@@ -47,23 +42,30 @@ async def grid_stability():
     weather = get_germany_weather()
     freq = micro.get_frequency()
     
-    # ✅ תיקון: בדיקה נכונה ל-DataFrame
+    temperature = None
+    if weather is not None and not weather.empty:
+        temperature = weather['temperature'].iloc[0] if 'temperature' in weather.columns else None
+
+    
     if weather is not None and not weather.empty:
         df = pd.DataFrame({
-            'timestamp': pd.date_range('2026-06-22', periods=48, freq='h'),
+            'timestamp': pd.date_range('2026-06-23', periods=48, freq='h'),
             'wind_speed': [weather['wind_speed'].iloc[0] if 'wind_speed' in weather else 3] * 48,
             'solar_radiation': [weather['solar_radiation'].iloc[0] if 'solar_radiation' in weather else 200] * 48
         })
         dunkelflaute_result, cf = check_dunkelflaute_today(df)
+        dunkelflaute_result = bool(dunkelflaute_result) if dunkelflaute_result is not None else False
+        cf = float(cf) if cf is not None else 0.0
     else:
         dunkelflaute_result = False
-        cf = 0
+        cf = 0.0
     
     return {
         "stability_status": "EMERGENCY" if dunkelflaute_result else "NORMAL",
         "dunkelflaute_detected": dunkelflaute_result,
-        "frequency_hz": freq.get('frequency', 50.0),
-        "load_mw": load,
+        "frequency_hz": float(freq.get('frequency', 50.0)),
+        "load_mw": int(load),
         "cf_48h": cf,
+        "temperature": temperature,
         "timestamp": datetime.now().isoformat()
     }
