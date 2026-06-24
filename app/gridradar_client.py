@@ -1,4 +1,8 @@
-# app/gridradar_client.py
+"""
+Gridradar API Client – Real grid frequency data
+Source: https://gridradar.net/api
+"""
+
 import os
 import requests
 import time
@@ -7,6 +11,12 @@ from dotenv import load_dotenv
 load_dotenv()
 
 GRIDRADAR_TOKEN = os.getenv('GRIDRADAR_TOKEN')
+
+# 🔑 בדיקה אקטיבית – הטוקן מודפס לצורך ניפוי (ללא תוכן מלא)
+if GRIDRADAR_TOKEN:
+    print(f"✅ GRIDRADAR_TOKEN loaded (length: {len(GRIDRADAR_TOKEN)})")
+else:
+    print("❌ GRIDRADAR_TOKEN NOT found in environment!")
 
 # משתני מטמון גלובליים
 _cached_frequency = None
@@ -33,13 +43,22 @@ def get_current_frequency():
             "seconds_until_refresh": int(FETCH_INTERVAL_SECONDS - time_passed)
         }
     
+    # אם אין טוקן – חזור ל-Swing Equation מיד
+    if not GRIDRADAR_TOKEN:
+        print("❌ No Gridradar token, using Swing Equation")
+        return {
+            "frequency": 50.0,
+            "source": "Swing Equation (No Token)",
+            "seconds_until_refresh": FETCH_INTERVAL_SECONDS
+        }
+    
     # 🌐 קריאה אמיתית ל-API (רק אם עבר מספיק זמן)
     try:
         response = requests.post(
             'https://api.gridradar.net/query',
             json={'metric': 'frequency-ucte-median-1s'},
             headers={'Authorization': f'Bearer {GRIDRADAR_TOKEN}'},
-            timeout=5  # הגנה מפני תגובה איטית
+            timeout=60  # הגנה מפני תגובה איטית
         )
         
         if response.status_code == 200:
@@ -54,23 +73,30 @@ def get_current_frequency():
                 "seconds_until_refresh": FETCH_INTERVAL_SECONDS
             }
         else:
-            print(f"⚠️ Gridradar error {response.status_code}. Returning cached.")
+            print(f"⚠️ Gridradar error {response.status_code}. Using fallback.")
             return {
-                "frequency": _cached_frequency,
-                "source": "Gridradar (Fallback)",
+                "frequency": _cached_frequency if _cached_frequency is not None else 50.0,
+                "source": f"Gridradar (Error {response.status_code})",
                 "seconds_until_refresh": FETCH_INTERVAL_SECONDS
             }
             
-    except Exception as e:
-        print(f"🔌 Gridradar connection error: {e}. Returning cached.")
+    except requests.exceptions.Timeout:
+        print("🔌 Gridradar timeout. Using cached/fallback.")
         return {
-            "frequency": _cached_frequency,
-            "source": "Gridradar (Fallback)",
+            "frequency": _cached_frequency if _cached_frequency is not None else 50.0,
+            "source": "Gridradar (Timeout)",
+            "seconds_until_refresh": FETCH_INTERVAL_SECONDS
+        }
+    except Exception as e:
+        print(f"🔌 Gridradar error: {e}. Using fallback.")
+        return {
+            "frequency": _cached_frequency if _cached_frequency is not None else 50.0,
+            "source": "Gridradar (Connection Error)",
             "seconds_until_refresh": FETCH_INTERVAL_SECONDS
         }
 
 if __name__ == "__main__":
     print("🔌 Testing protected Gridradar client:")
     print(get_current_frequency())
-    time.sleep(5)
+    time.sleep(60)
     print(get_current_frequency())  # אמור להחזיר Cached

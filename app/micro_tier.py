@@ -5,24 +5,7 @@ Micro Tier – Frequency calculation with Swing Equation + Gridradar
 from app.physics_bridge import PhysicsBridge
 from app.gridradar_client import get_current_frequency
 from app.smard_fetcher import SMARDFetcher
-import joblib
-import pandas as pd
-from app.dwd_fetcher import get_germany_weather
 
-class MacroTier:
-    def __init__(self):
-        self.model = joblib.load('models/lightgbm_model.pkl')
-        
-    def predict_load(self, generation_mw=50000):
-        """Predict load using LightGBM model"""
-        # שימוש במודל אם יש לך נתוני קלט, אחרת fallback
-        try:
-            # כאן תוכל להעביר את generation_mw + time features למודל
-            # כרגע - fallback
-            return 50000
-        except:
-            return 50000
-        
 class MicroTier:
     def __init__(self):
         self.bridge = PhysicsBridge()
@@ -30,20 +13,21 @@ class MicroTier:
         
     def get_frequency(self):
         """Try Gridradar first, fallback to Swing Equation"""
-        # Try real frequency first
+        # ✅ נסה את Gridradar
         gridradar_freq = get_current_frequency()
         
-        if gridradar_freq.get('source') == 'Gridradar':
+        # ✅ אם Gridradar החזיר תוצאה תקינה – השתמש בה
+        if gridradar_freq and gridradar_freq.get('source') in ['Gridradar (Live)', 'Gridradar (Cached)']:
             return gridradar_freq
         
-        # Fallback: Swing Equation
+        # ❌ אם Gridradar נכשל – השתמש ב-Swing Equation
+        print("⚠️ Gridradar failed, using Swing Equation fallback")
         load = self.smard.get_current_load()
         if load is None:
-            load = 50000  # Default
+            load = 50000
         
-        # Simplified Swing calculation
-        # Using typical values for Germany
-        P_imbalance = 0  # Would need wind/solar data
+        # חישוב Swing Equation (פשטני)
+        P_imbalance = 0  # נדרוש נתוני רוח/שמש
         f = self.bridge.swing_step(50.0, P_imbalance)
         
         return {

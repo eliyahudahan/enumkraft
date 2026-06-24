@@ -1,38 +1,23 @@
 """
-DWD Open Data Fetcher – Real weather data from DWD (CSV)
+DWD Open Data Fetcher – Real weather via Open-Meteo (DWD model)
 """
 
 import pandas as pd
 import requests
 from datetime import datetime, timedelta
-import io
 
 class DWDFetcher:
     def __init__(self):
-        self.station_id = "01005"  # Berlin-Dahlem
+        self.station_id = "01005"
         self.base_url = "https://opendata.dwd.de/climate_environment/CDC/observations_germany/climate/hourly/"
 
     def get_weather_today(self):
-        """Get weather data directly from DWD (CSV)"""
-        print("📡 Fetching DWD weather data (CSV)...")
-
-        # 1. טמפרטורה
-        temp_url = f"{self.base_url}air_temperature/historical/stundenwerte_TU_{self.station_id}_*.zip"
-        try:
-            # DWD מציע קבצי ZIP, ננסה את האחרון
-            response = requests.get(temp_url, timeout=15)
-            if response.status_code == 200:
-                print("✅ DWD temperature data received")
-                # TODO: unzip and parse
-        except:
-            pass
-
-        # 2. אם נכשל – נשתמש ב-Open-Meteo (fallback)
+        """Get weather data from Open-Meteo (DWD-powered)"""
+        print("📡 Fetching DWD weather data (via Open-Meteo)...")
         return self._fallback_openmeteo()
 
     def _fallback_openmeteo(self):
-        """Fallback: Open-Meteo (DWD-powered)"""
-        print("⚠️ Using Open-Meteo (DWD-powered) as fallback")
+        """Primary source: Open-Meteo with DWD model"""
         url = "https://api.open-meteo.com/v1/forecast"
         params = {
             "latitude": 51.0,
@@ -44,7 +29,7 @@ class DWDFetcher:
         }
 
         try:
-            response = requests.get(url, params=params, timeout=10)
+            response = requests.get(url, params=params, timeout=30)  # ✅ Timeout 30
             if response.status_code == 200:
                 data = response.json()
                 hourly = data['hourly']
@@ -59,17 +44,19 @@ class DWDFetcher:
         except Exception as e:
             print(f"⚠️ Open-Meteo error: {e}")
 
-        # 3. אם הכל נכשל – synthetic
-        print("⚠️ All weather sources failed – using synthetic data")
+        # Fallback to synthetic (only if both fail)
+        print("⚠️ Using synthetic weather data")
         return self._synthetic_weather()
 
     def _synthetic_weather(self):
-        """Synthetic weather data (realistic for Germany)"""
+        """Synthetic weather data (fallback only)"""
         now = datetime.now()
         timestamps = [now + timedelta(hours=i) for i in range(24)]
-        temps = [15 + 10 * (1 - abs(h - 12) / 12) for h in [t.hour for t in timestamps]]
-        winds = [3 + 3 * (1 - abs(h - 12) / 12) for h in [t.hour for t in timestamps]]
-        solar = [max(0, 800 * (1 - abs(h - 12) / 12)) for h in [t.hour for t in timestamps]]
+        hour_of_day = [t.hour for t in timestamps]
+        
+        temps = [15 + 10 * (1 - abs(h - 12) / 12) for h in hour_of_day]
+        winds = [3 + 3 * (1 - abs(h - 12) / 12) for h in hour_of_day]
+        solar = [max(0, 800 * (1 - abs(h - 12) / 12)) for h in hour_of_day]
 
         df = pd.DataFrame({
             'timestamp': timestamps,
@@ -83,3 +70,9 @@ class DWDFetcher:
 def get_germany_weather():
     fetcher = DWDFetcher()
     return fetcher.get_weather_today()
+
+if __name__ == "__main__":
+    df = get_germany_weather()
+    if df is not None and not df.empty:
+        print(f"✅ Got {len(df)} hours of weather data")
+        print(df[['timestamp', 'temperature', 'wind_speed']].head())

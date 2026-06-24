@@ -14,7 +14,7 @@ placeholder = st.empty()
 
 while True:
     try:
-        response = requests.get(f"{API_URL}/api/v1/grid/stability", timeout=10)
+        response = requests.get(f"{API_URL}/api/v1/grid/stability", timeout=60)
         response.raise_for_status()
         data = response.json()
         

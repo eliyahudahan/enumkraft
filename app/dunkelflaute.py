@@ -82,6 +82,31 @@ def check_dunkelflaute_today(weather_df):
     
     return result, cf
 
+def classify_grid_state(cf_48h, load_mw):
+    """
+    Classify grid state based on CF and load.
+    Returns: dict with state, action, and details.
+    """
+    DUNKELFLAUTE_CF_THRESHOLD = 0.06
+    HIGH_LOAD_THRESHOLD = 65_000   # MW
+    PEAK_LOAD_THRESHOLD = 75_000   # MW
+    
+    is_dunkelflaute = cf_48h < DUNKELFLAUTE_CF_THRESHOLD
+    is_high_load = load_mw >= HIGH_LOAD_THRESHOLD
+    is_peak_load = load_mw >= PEAK_LOAD_THRESHOLD
+    
+    if is_dunkelflaute and is_peak_load:
+        return {"state": "🔴🔴 EMERGENCY", "action": "Full backup + import + DR"}
+    elif is_dunkelflaute and is_high_load:
+        return {"state": "🔴 CRITICAL", "action": "Backup + Scandinavia import"}
+    elif is_dunkelflaute:
+        return {"state": "⚠️ DUNKELFLAUTE", "action": "Standby backup"}
+    elif is_high_load:
+        return {"state": "📊 HIGH LOAD", "action": "LightGBM + optional backup"}
+    else:
+        return {"state": "✅ NORMAL", "action": "LightGBM forecast"}
+
+
 if __name__ == "__main__":
     # Test with sample data
     print("🧪 Testing Dunkelflaute Detection...")

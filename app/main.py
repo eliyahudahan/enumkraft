@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from app.dwd_fetcher import get_germany_weather
-from app.dunkelflaute import check_dunkelflaute_today
+from app.dunkelflaute import check_dunkelflaute_today, classify_grid_state  # ✅ הוסף את זה
 from app.macro_tier import MacroTier
 from app.micro_tier import MicroTier
 from app.physics_bridge import PhysicsBridge
@@ -46,7 +46,8 @@ async def grid_stability():
     if weather is not None and not weather.empty:
         temperature = weather['temperature'].iloc[0] if 'temperature' in weather.columns else None
 
-    
+    dunkelflaute_result = False
+    cf = 0.0
     if weather is not None and not weather.empty:
         df = pd.DataFrame({
             'timestamp': pd.date_range('2026-06-23', periods=48, freq='h'),
@@ -56,16 +57,17 @@ async def grid_stability():
         dunkelflaute_result, cf = check_dunkelflaute_today(df)
         dunkelflaute_result = bool(dunkelflaute_result) if dunkelflaute_result is not None else False
         cf = float(cf) if cf is not None else 0.0
-    else:
-        dunkelflaute_result = False
-        cf = 0.0
+    
+    # ✅ השתמש ב-classify_grid_state
+    grid_state = classify_grid_state(cf, load)
     
     return {
-        "stability_status": "EMERGENCY" if dunkelflaute_result else "NORMAL",
+        "stability_status": grid_state["state"],
         "dunkelflaute_detected": dunkelflaute_result,
         "frequency_hz": float(freq.get('frequency', 50.0)),
         "load_mw": int(load),
         "cf_48h": cf,
         "temperature": temperature,
+        "action": grid_state["action"],  # ✅ הוסף את הפעולה המומלצת
         "timestamp": datetime.now().isoformat()
     }
