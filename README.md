@@ -77,7 +77,7 @@ Endpoint	Description	Example Response
 /	Health check	{"project":"EnumKraft 2.0","status":"running"}
 /api/v1/macro/forecast	Load forecast + CF	{"load_mw":60453,"cf_48h":0.0012}
 /api/v1/micro/frequency	Live frequency (Gridradar / Swing)	{"frequency":50.041,"source":"Gridradar (Live)"}
-/api/v1/grid/stability	Combined stability status	{"stability_status":"⚠️ DUNKELFLAUTE","action":"Standby backup"}
+/api/v1/grid/stability	Combined stability status	{"state":"⚠️ DUNKELFLAUTE","action":"Standby backup"}
 📊 Decision Logic (Grid States)
 State	Condition	Action
 ✅ NORMAL	CF ≥ 0.06, Load < 65,000 MW	LightGBM forecast
@@ -108,11 +108,11 @@ enumkraft/
 └── README.md
 📊 Data Sources
 Metric	Primary Source	Fallback	Fallback Label
-Frequency	Gridradar (Live)	Swing Equation	"Fallback היסטורי מאומת"
-Load	SMARD (Live)	None	"לא זמין"
-Weather	DWD (Live)	Synthetic	"Synthetic (fallback)"
-CF	DWD + SMARD	None	"לא זמין"
-Dunkelflaute	All above	None	"לא זמין"
+Frequency	Gridradar (Live)	Swing Equation	Physics-based fallback
+Load	SMARD (Live)	None	Unavailable
+Weather	DWD (Live)	None	Unavailable
+CF	DWD + SMARD	None	Unavailable
+Dunkelflaute	All above	None	Unavailable
 🧪 Validation
 Metric	Value	Source
 Frequency	50.041 ± 0.05 Hz	Gridradar / Swing Eq
@@ -120,13 +120,26 @@ Load MAE	261 MW	LightGBM
 Dunkelflaute CF	< 0.06	Strnad et al. (2026)
 Weather	24h forecast	DWD (Open‑Meteo)
 📚 References
-Strnad et al. (2026) – Assessing the risk of future Dunkelflaute events for Germany
+Strnad et al. (2026) – Assessing the risk of future Dunkelflaute events for Germany using generative deep learning. Environmental Data Science, 5, e11. Cambridge University Press. Open Access.
 
-DWD (2024) – Climate change unlikely to increase Dunkelflaute events
+DWD (2024) – Climate change unlikely to increase Dunkelflaute events in central Europe. Clean Energy Wire (CLEW), Berlin.
 
-Gridradar API – Live frequency data
+Mockert et al. (2023) – Original supply-based Dunkelflaute definition (CF < 0.06 over 48h), adopted by Strnad et al. (2026).
 
-SMARD – German electricity market data (Bundesnetzagentur)
+Gridradar API – Live frequency data.
+
+SMARD – German electricity market data (Bundesnetzagentur).
+
+📝 A Note on Dunkelflaute Definitions
+Dunkelflaute lacks a single standardized definition in the literature. Different studies use different thresholds and criteria:
+
+Meteorological definitions – identify large-scale weather patterns linked to low renewable generation (e.g., DWD's "High Central Europe" pattern, <10% capacity).
+
+Supply-based definitions – operationalize Dunkelflaute directly from renewable generation (CF falling below a threshold for a minimum duration). This is the approach used in this project.
+
+Supply-and-demand definitions – additionally incorporate electricity demand.
+
+This project follows the supply-based approach: CF < 0.06 over 48 hours (Mockert et al. 2023, adopted by Strnad et al. 2026). This is distinct from DWD's meteorological pattern-based method. Both are valid – they simply measure related but not identical phenomena using different methodologies.
 
 🤝 Feedback & Contributions
 Open an issue or contact:
