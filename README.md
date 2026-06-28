@@ -14,9 +14,8 @@ EnumKraft 2.0 is a production‑ready system that combines physical modeling (Sw
 - **Load forecasting** – LightGBM (MAE **261 MW**, ~0.5% error)
 - **Dunkelflaute detection** – based on Strnad et al. (2026): CF < 0.06 over 48h
 - **Weather data** – DWD (official German weather service) via Open‑Meteo
-- **REST API** – 5 endpoints (health, macro forecast, future forecast, micro frequency, grid stability)
+- **REST API** – 4 endpoints (health, macro forecast, micro frequency, grid stability)
 - **Decision Logic** – 5 states: NORMAL, HIGH LOAD, DUNKELFLAUTE, CRITICAL, EMERGENCY
-- **Slack Alerts** – Automatic notifications for critical grid states
 - **Containerized** – Docker image ready for deployment
 - **Dashboard** – Streamlit dashboard with live metrics + Germany map
 
@@ -24,29 +23,23 @@ EnumKraft 2.0 is a production‑ready system that combines physical modeling (Sw
 
 ## 📊 Architecture
 ┌─────────────────────────────────────────────────────────────────────┐
-│ FastAPI (5 endpoints) │
+│ FastAPI (4 endpoints) │
 ├─────────────┬───────────────────┬───────────────────┬───────────────┤
-│ Macro │ Macro Future │ Micro │ Grid │
-│ Forecast │ Forecast │ Frequency │ Stability │
+│ Macro │ Micro │ Macro │ Grid │
+│ Forecast │ Frequency │ Future Forecast │ Stability │
 └──────┬──────┴────────┬──────────┴────────┬──────────┴───────┬───────┘
 │ │ │ │
 ▼ ▼ ▼ ▼
-┌─────────────┐ ┌─────────────┐ ┌──────────────┐ ┌────────────────────┐
-│ LightGBM │ │ LightGBM │ │ Gridradar │ │ DWD + SMARD │
-│ (Load MW) │ │ (Future) │ │ (Live Freq) │ │ (Weather + Load) │
-└─────────────┘ └─────────────┘ └──────┬───────┘ └────────┬───────────┘
+┌─────────────┐ ┌──────────────┐ ┌─────────────┐ ┌────────────────────┐
+│ LightGBM │ │ Gridradar │ │ LightGBM │ │ DWD + SMARD │
+│ (Load MW) │ │ (Live Freq) │ │ (Future) │ │ (Weather + Load) │
+└─────────────┘ └──────┬───────┘ └─────────────┘ └────────┬───────────┘
 │ │
 ▼ ▼
 ┌───────────────┐ ┌────────────────────┐
 │ Swing Equation│ │ Dunkelflaute │
 │ (Fallback) │ │ Detection (CF) │
-└───────────────┘ └─────────┬──────────┘
-│
-▼
-┌──────────────┐
-│ Slack Alert │
-│ (Critical) │
-└──────────────┘
+└───────────────┘ └────────────────────┘
 
 text
 
@@ -61,16 +54,15 @@ cd enumkraft
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
-2. Add your Gridradar token and Slack webhook (optional)
+2. Add your Gridradar token
 Create a .env file:
 
 bash
 GRIDRADAR_TOKEN=your_token_here
-SLACK_WEBHOOK_URL=https://hooks.slack.com/services/your/webhook/url  # optional
 3. Run with Docker
 bash
 docker build -t enumkraft:2.0 .
-docker run -p 8000:8000 -e GRIDRADAR_TOKEN="$GRIDRADAR_TOKEN" -e SLACK_WEBHOOK_URL="$SLACK_WEBHOOK_URL" enumkraft:2.0
+docker run -p 8000:8000 --env-file .env enumkraft:2.0
 4. Test the API
 bash
 curl http://localhost:8000/
@@ -106,8 +98,7 @@ enumkraft/
 │   ├── dunkelflaute.py            # CF < 0.06 + Decision Logic
 │   ├── dwd_fetcher.py             # DWD weather (Open‑Meteo)
 │   ├── gridradar_client.py        # Gridradar API with TTL cache
-│   ├── smard_fetcher.py           # SMARD load data (Germany)
-│   └── alerting.py                # Slack alert module
+│   └── smard_fetcher.py           # SMARD load data (Germany)
 ├── models/
 │   └── lightgbm_model.pkl         # Trained model (MAE 261 MW)
 ├── notebooks/
@@ -147,6 +138,25 @@ SMARD – German electricity market data (Bundesnetzagentur).
 
 📝 A Note on Dunkelflaute Definitions
 Dunkelflaute lacks a single standardized definition in the literature. This project follows the supply-based approach: CF < 0.06 over 48 hours (Mockert et al. 2023, adopted by Strnad et al. 2026). This is distinct from meteorological definitions (e.g., DWD's "High Central Europe" pattern). Both are valid – they measure related but not identical phenomena.
+
+Status
+EnumKraft 2.0 is a complete, working system:
+
+Live frequency (Gridradar, with TTL cache + fallback on rate limits)
+
+Live load data (SMARD, Bundesnetzagentur)
+
+Live weather data (DWD via Open-Meteo)
+
+Dunkelflaute detection (CF < 0.06, Strnad et al. 2026)
+
+Load forecasting (LightGBM, MAE 261 MW)
+
+REST API (4 endpoints), Dockerized
+
+Streamlit dashboard
+
+Slack alerting was attempted and did not work reliably in testing; it is not part of the system as delivered.
 
 🤝 Feedback & Contributions
 Open an issue or contact:
