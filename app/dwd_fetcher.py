@@ -29,7 +29,8 @@ class DWDFetcher:
         }
 
         try:
-            response = requests.get(url, params=params, timeout=30)  # ✅ Timeout 30
+            # ✅ Timeout הוגדל ל-60 שניות
+            response = requests.get(url, params=params, timeout=60)
             if response.status_code == 200:
                 data = response.json()
                 hourly = data['hourly']
@@ -41,10 +42,12 @@ class DWDFetcher:
                 })
                 print("✅ Got weather from Open-Meteo (DWD-powered)")
                 return df
+            else:
+                print(f"⚠️ Open-Meteo error: {response.status_code}")
         except Exception as e:
             print(f"⚠️ Open-Meteo error: {e}")
 
-        # Fallback to synthetic (only if both fail)
+        # Fallback to synthetic
         print("⚠️ Using synthetic weather data")
         return self._synthetic_weather()
 

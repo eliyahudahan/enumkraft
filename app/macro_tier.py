@@ -7,10 +7,12 @@ import pandas as pd
 from datetime import datetime, timedelta
 from app.dwd_fetcher import get_germany_weather
 from app.smard_fetcher import SMARDFetcher
+import sklearn  # ✅ הוסף את זה
 
 class MacroTier:
     def __init__(self):
         try:
+            # ✅ טען עם sklearn compatibility
             self.model = joblib.load('models/lightgbm_model.pkl')
             print("✅ LightGBM model loaded")
         except Exception as e:
@@ -30,33 +32,37 @@ class MacroTier:
         return 50000  # Fallback
     
     def forecast_load(self, target_time=None):
-        """
-        Forecast load for a future time using LightGBM.
-        target_time: datetime object (default: 24 hours from now)
-        Returns: forecast load in MW, or None if unavailable
-        """
-        if self.model is None:
-            print("⚠️ LightGBM model not available")
-            return None
+        """Forecast load using LightGBM, fallback to SMARD if fails"""
+        # ✅ ניסיון ראשון – LightGBM
+        if self.model is not None:
+            try:
+                if target_time is None:
+                    target_time = datetime.now() + timedelta(hours=24)
+                
+                # ✅ יצירת תכונות
+                features = pd.DataFrame([{
+                    'Pm': 50000,
+                    'hour': target_time.hour,
+                    'day_of_week': target_time.weekday(),
+                    'month': target_time.month,
+                    'is_weekend': 1 if target_time.weekday() >= 5 else 0
+                }])
+                
+                # ✅ סדר העמודות הנכון
+                feature_order = ['Pm', 'hour', 'day_of_week', 'month', 'is_weekend']
+                features = features[feature_order]
+                
+                # ✅ ניסיון תחזית
+                forecast = self.model.predict(features)[0]
+                return round(forecast, 0)
+                
+            except Exception as e:
+                print(f"⚠️ LightGBM forecast error: {e}")
+                # ✅ ניפול ל-fallback
         
-        if target_time is None:
-            target_time = datetime.now() + timedelta(hours=24)
-        
-        # Create features for the target time
-        features = pd.DataFrame([{
-            'hour': target_time.hour,
-            'day_of_week': target_time.weekday(),
-            'month': target_time.month,
-            'is_weekend': 1 if target_time.weekday() >= 5 else 0,
-            'Pm': 50000  # Estimated generation (can be improved with DWD)
-        }])
-        
-        try:
-            forecast = self.model.predict(features)[0]
-            return round(forecast, 0)
-        except Exception as e:
-            print(f"⚠️ Forecast error: {e}")
-            return None
+        # ✅ Fallback – העומס האחרון מ-SMARD
+        print("⚠️ Using SMARD fallback for forecast")
+        return self.predict_load()
     
     def compute_cf(self, weather_data):
         """Compute Capacity Factor from weather data"""
