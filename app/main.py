@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from app.dwd_fetcher import get_germany_weather
-from app.dunkelflaute import check_dunkelflaute_today, classify_grid_state  # ✅ הוסף את זה
+from app.dunkelflaute import check_dunkelflaute_today, classify_grid_state
 from app.macro_tier import MacroTier
 from app.micro_tier import MicroTier
 from app.physics_bridge import PhysicsBridge
@@ -31,6 +31,26 @@ async def macro_forecast():
         "timestamp": datetime.now().isoformat()
     }
 
+@app.get("/api/v1/macro/forecast/future")
+async def macro_forecast_future(hours_ahead: int = 24):
+    """
+    Forecast load X hours ahead using LightGBM.
+    Default: 24 hours ahead.
+    """
+    target_time = datetime.now() + pd.Timedelta(hours=hours_ahead)
+    forecast = macro.forecast_load(target_time)
+    
+    if forecast is None:
+        return {"error": "Forecast not available", "model": "LightGBM", "mae": 261}
+    
+    return {
+        "forecast_load_mw": forecast,
+        "target_time": target_time.isoformat(),
+        "model": "LightGBM",
+        "mae": 261,
+        "hours_ahead": hours_ahead
+    }
+
 @app.get("/api/v1/micro/frequency")
 async def micro_frequency():
     freq = micro.get_frequency()
@@ -49,8 +69,9 @@ async def grid_stability():
     dunkelflaute_result = False
     cf = 0.0
     if weather is not None and not weather.empty:
+        today = datetime.now().strftime("%Y-%m-%d")
         df = pd.DataFrame({
-            'timestamp': pd.date_range('2026-06-23', periods=48, freq='h'),
+            'timestamp': pd.date_range(today, periods=48, freq='h'),
             'wind_speed': [weather['wind_speed'].iloc[0] if 'wind_speed' in weather else 3] * 48,
             'solar_radiation': [weather['solar_radiation'].iloc[0] if 'solar_radiation' in weather else 200] * 48
         })
@@ -58,7 +79,6 @@ async def grid_stability():
         dunkelflaute_result = bool(dunkelflaute_result) if dunkelflaute_result is not None else False
         cf = float(cf) if cf is not None else 0.0
     
-    # ✅ השתמש ב-classify_grid_state
     grid_state = classify_grid_state(cf, load)
     
     return {
@@ -68,6 +88,6 @@ async def grid_stability():
         "load_mw": int(load),
         "cf_48h": cf,
         "temperature": temperature,
-        "action": grid_state["action"],  # ✅ הוסף את הפעולה המומלצת
+        "action": grid_state["action"],
         "timestamp": datetime.now().isoformat()
     }
