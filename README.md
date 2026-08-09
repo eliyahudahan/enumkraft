@@ -3,7 +3,7 @@ markdown
 
 **Real‑time frequency monitoring + Swing equation + LightGBM load forecasting**
 
-EnumKraft 2.0 is a production‑ready system that combines physical modeling (Swing equation) with machine learning (LightGBM) and live data feeds to detect **Dunkelflaute** events and assess grid stability in Germany.
+EnumKraft 2.0 is a deployed‑ready system that combines physical modeling (Swing equation) with machine learning (LightGBM) and live data feeds to detect **Dunkelflaute** events and assess grid stability in Germany.
 
 ---
 
