@@ -3,7 +3,7 @@ markdown
 
 **Real‑time frequency monitoring + Swing equation + LightGBM load forecasting**
 
-EnumKraft 2.0 is a deployed‑ready system that combines physical modeling (Swing equation) with machine learning (LightGBM) and live data feeds to detect **Dunkelflaute** events and assess grid stability in Germany.
+EnumKraft 2.0 is a deployed system that combines physical modeling (Swing equation) with machine learning (LightGBM) and live data feeds to detect **Dunkelflaute** events and assess grid stability in Germany.
 
 ---
 
@@ -16,7 +16,7 @@ EnumKraft 2.0 is a deployed‑ready system that combines physical modeling (Swin
 - **Weather data** – DWD (official German weather service) via Open‑Meteo
 - **REST API** – 4 endpoints (health, macro forecast, micro frequency, grid stability)
 - **Decision Logic** – 5 states: NORMAL, HIGH LOAD, DUNKELFLAUTE, CRITICAL, EMERGENCY
-- **Containerized** – Docker image ready for deployment
+- **Containerized** – runs with Docker
 - **Dashboard** – Streamlit dashboard with live metrics + Germany map
 
 ---
@@ -59,20 +59,19 @@ Create a .env file:
 
 bash
 GRIDRADAR_TOKEN=your_token_here
-3. Run with Docker
+3. Run the API (Terminal 1)
 bash
 docker build -t enumkraft:2.0 .
 docker run -p 8000:8000 --env-file .env enumkraft:2.0
-4. Test the API
+Or run locally: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+4. Run the Dashboard (Terminal 2)
+bash
+streamlit run streamlit_app.py
+5. Test the API
 bash
 curl http://localhost:8000/
 curl http://localhost:8000/api/v1/macro/forecast
-curl http://localhost:8000/api/v1/macro/forecast/future
-curl http://localhost:8000/api/v1/micro/frequency
-curl http://localhost:8000/api/v1/grid/stability
-5. Run Dashboard
-bash
-streamlit run streamlit_app.py
 📡 API Endpoints
 Endpoint	Description	Example Response
 /	Health check	{"project":"EnumKraft 2.0","status":"running"}
@@ -132,31 +131,38 @@ DWD (2024) – Climate change unlikely to increase Dunkelflaute events in centra
 
 Mockert et al. (2023) – Original supply-based Dunkelflaute definition (CF < 0.06 over 48h), adopted by Strnad et al. (2026).
 
-Gridradar API – Live frequency data.
-
-SMARD – German electricity market data (Bundesnetzagentur).
-
 📝 A Note on Dunkelflaute Definitions
 Dunkelflaute lacks a single standardized definition in the literature. This project follows the supply-based approach: CF < 0.06 over 48 hours (Mockert et al. 2023, adopted by Strnad et al. 2026). This is distinct from meteorological definitions (e.g., DWD's "High Central Europe" pattern). Both are valid – they measure related but not identical phenomena.
 
-Status
+📊 Status
 EnumKraft 2.0 is a complete, working system:
 
-Live frequency (Gridradar, with TTL cache + fallback on rate limits)
+✅ Live frequency (Gridradar, with TTL cache + fallback on rate limits)
 
-Live load data (SMARD, Bundesnetzagentur)
+✅ Live load data (SMARD, Bundesnetzagentur)
 
-Live weather data (DWD via Open-Meteo)
+✅ Live weather data (DWD via Open-Meteo)
 
-Dunkelflaute detection (CF < 0.06, Strnad et al. 2026)
+✅ Dunkelflaute detection (CF < 0.06, Strnad et al. 2026)
 
-Load forecasting (LightGBM, MAE 261 MW)
+✅ Load forecasting (LightGBM, MAE 261 MW)
 
-REST API (4 endpoints), Dockerized
+✅ REST API (4 endpoints), Dockerized
 
-Streamlit dashboard
+✅ Streamlit dashboard
 
-Slack alerting was attempted and did not work reliably in testing; it is not part of the system as delivered.
+Note: Slack alerting was attempted and did not work reliably in testing; it is not part of the system as delivered.
+
+☁️ Deploying to Streamlit Cloud
+The dashboard alone can be deployed to Streamlit Cloud. However, the FastAPI backend must be deployed separately (e.g., on Render, Railway, or a VPS).
+
+To run the dashboard on Streamlit Cloud:
+
+Set API_URL as a Secret in Streamlit Cloud
+
+Point it to your deployed FastAPI backend
+
+For local development, the dashboard connects to http://localhost:8000.
 
 🤝 Feedback & Contributions
 Open an issue or contact:
